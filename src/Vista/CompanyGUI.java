@@ -5,8 +5,10 @@ import Config.Company;
 import Config.DBConnection;
 import Config.Employee;
 import java.awt.Color;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -241,6 +243,11 @@ public class CompanyGUI extends javax.swing.JFrame {
         BtnDownload.setBackground(new java.awt.Color(255, 255, 255));
         BtnDownload.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         BtnDownload.setText("Download file");
+        BtnDownload.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BtnDownloadActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -303,11 +310,12 @@ public class CompanyGUI extends javax.swing.JFrame {
                             .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                         .addGap(18, 18, 18)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 411, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 600, Short.MAX_VALUE))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(272, 272, 272)
-                        .addComponent(jLabel1)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(jLabel1)
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -370,8 +378,7 @@ public class CompanyGUI extends javax.swing.JFrame {
         
         //******************************************
         
-        String xml = XML.toString(file);
-        System.out.println(xml);
+        
         
         c1.Insert(Long.parseLong(dni) ,name, dependency, date, file.toString());//Enviar la informacion al metodo agregar 
         JOptionPane.showMessageDialog(this, "Empleado agregado correctamente");
@@ -509,6 +516,38 @@ public class CompanyGUI extends javax.swing.JFrame {
         
         //******************************************
     }//GEN-LAST:event_BtnUpdateActionPerformed
+
+    private void BtnDownloadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnDownloadActionPerformed
+
+        try {
+            int idBuscar = Integer.parseInt(TxtInsertDNI.getText()); //obtner id en entero
+            Object[][] persona = c1.searchID(idBuscar);//busca el ID en la memoria
+        
+            if(persona [0][0] == null){
+                JOptionPane.showMessageDialog(this, "Empleado no existe");
+            }
+            else{
+                JSONObject json = new JSONObject(TxtFileLoad.getText()); //Crea un objeto JSON con la info de la ruta
+                String xml = XML.toString(json);//convierte json a xml
+                FileWriter myWriter = null;//iniciariza variable para escribir fichero
+                myWriter = new FileWriter("C:\\Users\\Cristian\\Desktop\\"+TxtDni.getText()+".xml");//crea un fichero en la ruta
+                myWriter.write(xml);//Escribe el fichero con la info convertida
+                myWriter.close();//cierra el fichero
+            }
+            
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Valor ingresador no es un ID");
+        }
+//        //******************************
+//        FileWriter myWriter = null;
+//        try {
+//            myWriter = new FileWriter("C:\\Users\\Cristian\\Desktop\\"+TxtDni.getText()+".xml");
+//            myWriter.write(xml);
+//            myWriter.close();
+//        } catch (IOException ex) {          
+//            Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+    }//GEN-LAST:event_BtnDownloadActionPerformed
 
     public void actualizarModelo(){
         data = c1.queryResult(); //actualiar la data
