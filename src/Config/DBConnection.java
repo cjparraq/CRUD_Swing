@@ -23,7 +23,7 @@ public class DBConnection {
             String user = "root";
             String pass = "changeme";
             con = DriverManager.getConnection(url,user,pass);
-            JOptionPane.showMessageDialog(null, "Conexion Exitosa", "Conexion", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Conexion Exitosa con BD", "Conexion", JOptionPane.INFORMATION_MESSAGE);
         }
         catch(ClassNotFoundException e){ //En caso de que no encuentre el driver
             JOptionPane.showMessageDialog(null, "No encontro Clase", "Conexion", JOptionPane.INFORMATION_MESSAGE);

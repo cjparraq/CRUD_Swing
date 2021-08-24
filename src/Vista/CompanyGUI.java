@@ -5,35 +5,40 @@ import Config.Company;
 import Config.DBConnection;
 import Config.Employee;
 import java.awt.Color;
+import java.awt.HeadlessException;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+//import java.io.File;
+//import java.io.FileNotFoundException;
+//import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Base64;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.XML;
 
-/**
- *
- * @author Cristian
- */
 public class CompanyGUI extends javax.swing.JFrame {
 
     public static Company c1;
     public static Object[][] data;
-    public static TableModel modelo;
+    public static TableModel modelo; // Para poder ir actualizando la tabla en memoria
     public static String[] columnas = {"DNI", "NAME", "DEPENDENCY", "DATE", "FILE"};
    
     
@@ -45,19 +50,20 @@ public class CompanyGUI extends javax.swing.JFrame {
         
         //*************Iniciar la memoria haciendo una consulta a la base*****************
         
-        DBConnection cn = new DBConnection();
-        Connection con = cn.getConnection();
-        String sql = "SELECT * FROM Employee";
+        DBConnection cn = new DBConnection();//Objeto de la clase de conexion a BD
+        Connection con = cn.getConnection();//Objeto Connection
+        String sql = "SELECT * FROM Employee"; //CommandSQL para consultar
         try {
-            PreparedStatement ps = con.prepareStatement(sql);
+            PreparedStatement ps = con.prepareStatement(sql); //declaro el CommandSQL en la clase connection
             ResultSet employees = ps.executeQuery();
             while(employees.next()){
-                java.sql.Date dateTemp = employees.getDate("Date");
+                java.sql.Date dateTemp = employees.getDate("Date");//conversion fechas SQL/java
                 Employee m = new Employee(employees.getLong("DNI"),employees.getString("Name"), employees.getString("Dependence"), new java.util.Date(dateTemp.getTime()) ,employees.getString("File"));
-                Company.getPerson().add(m);
+                Company.getPerson().add(m);//Adiciona los elementos traido de la base a la tabla en memoria
             }
-            con.close();//Termina conexión
-            this.actualizarModelo();
+            con.close();//Termina conexión con la base
+            JOptionPane.showMessageDialog(null, "Finaliza conexion con BD", "Conexion", JOptionPane.INFORMATION_MESSAGE);
+            this.actualizarModelo();//actualiza tabla en memoria
         } catch (SQLException ex) {
             Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -344,11 +350,13 @@ public class CompanyGUI extends javax.swing.JFrame {
         String dni = TxtDni.getText(); //Obtener informacion ingresada de la interfaz
         String name = TxtName.getText(); //Obtener informacion ingresada de la interfaz
         String dependency = TxtDependency.getText();//Obtener informacion ingresada de la interfaz
-        //String date = TxtDate.getText();//Obtener informacion ingresada de la interfaz
         String filePath = TxtFileLoad.getText();//Obtener informacion ingresada de la interfaz
+        File rawFile = new File(filePath);
         String contentFile = null;
+        InputStream targetStream = null;
         try {
-            contentFile = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
+            targetStream = new FileInputStream(rawFile); // Archivo en bytes
+            contentFile = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8); //Archivo String
         } catch (IOException ex) {
             Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -360,28 +368,32 @@ public class CompanyGUI extends javax.swing.JFrame {
         Connection con = cn.getConnection();
         java.util.Date date = new java.util.Date();
         java.sql.Timestamp timestamp = new java.sql.Timestamp(date.getTime());
+        String encoded = Base64.getEncoder().encodeToString(file.toString().getBytes()); // Archivo codificado
         
-        String sql = "INSERT INTO Employee VALUES (?,?,?,?,?)";
+        String sql = "INSERT INTO Employee VALUES (?,?,?,?,?,?,?)";//Command SQL para enviar datos a BD
         try {
+            int len = (int)rawFile.length();
+            
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setString(1, dni);
             ps.setString(2, name);
             ps.setString(3, dependency);
             ps.setTimestamp(4, timestamp);
             ps.setString(5, file.toString());
+            ps.setBinaryStream(6, targetStream, len);
+            ps.setString(7, encoded);
             ps.execute();
             con.close();//Termina conexión
+            JOptionPane.showMessageDialog(null, "Finaliza conexion con BD", "Conexion", JOptionPane.INFORMATION_MESSAGE);
             
         } catch (SQLException ex) {
             Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
         }
         
         //******************************************
-        
-        
-        
+
         c1.Insert(Long.parseLong(dni) ,name, dependency, date, file.toString());//Enviar la informacion al metodo agregar 
-        JOptionPane.showMessageDialog(this, "Empleado agregado correctamente");
+        JOptionPane.showMessageDialog(this, "Empleado agregado con exito");
         actualizarModelo();
         TxtDni.setText("");//Deja todo en vacio
         TxtName.setText("");
@@ -396,23 +408,22 @@ public class CompanyGUI extends javax.swing.JFrame {
         TxtDni.setText((String) persona[0][1]);
         TxtName.setText((String) persona[0][2]);
         TxtDependency.setText((String) persona[0][3]);
-        //TxtDate.setText((String)persona[0][4]);
     }//GEN-LAST:event_tableMousePressed
 
     private void BtnReadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnReadActionPerformed
         try {
-            long idBuscar = Long.parseLong(TxtInsertDNI.getText()); //obtner DNI en entero
-            Object[][] persona = c1.searchID(idBuscar);
+            long idBuscar = Long.parseLong(TxtInsertDNI.getText());
+            Object[][] persona = c1.searchID(idBuscar);//buscar DNI ingresado en memoria
         
             if(persona [0][0] == null){
                 JOptionPane.showMessageDialog(this, "Informacion de empleado no existe");
             }
             else{
-                JOptionPane.showMessageDialog(this, "empleado encontrado");
+                JOptionPane.showMessageDialog(this, "Empleado encontrado");
                 java.util.Date date = new java.util.Date();
                 java.sql.Timestamp timestamp = new java.sql.Timestamp(date.getTime());
                 
-                TxtDni.setText( String.valueOf(persona[0][0]));
+                TxtDni.setText( String.valueOf(persona[0][0]));//envia la informacion encontrada a los Jtext
                 TxtName.setText( (String)persona[0][1]);
                 TxtDependency.setText((String) persona[0][2]);
                 TxtFileLoad.setText((String) persona[0][4]);
@@ -420,13 +431,34 @@ public class CompanyGUI extends javax.swing.JFrame {
             }
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Valor ingresador no es un ID");
+            JOptionPane.showMessageDialog(this, "Valor ingresador no es un DNI");
         }   
     }//GEN-LAST:event_BtnReadActionPerformed
 
     private void BtnDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnDeleteActionPerformed
+        //*************Borrar registro base*****************
+        DBConnection cn = new DBConnection();
+        Connection con = cn.getConnection();
+        java.util.Date date = new java.util.Date();
+        java.sql.Timestamp timestamp = new java.sql.Timestamp(date.getTime());
+        
+        String sql = "DELETE FROM Employee WHERE DNI = ?";
         try {
-            int idBuscar = Integer.parseInt(TxtInsertDNI.getText()); //obtner id en entero
+            long dni = Long.parseLong(TxtDni.getText());
+            PreparedStatement ps = con.prepareStatement(sql);
+            ps.setLong(1, dni);
+            ps.executeUpdate();
+            con.close();//Termina conexión
+            JOptionPane.showMessageDialog(null, "Finaliza conexion con BD", "Conexion", JOptionPane.INFORMATION_MESSAGE);
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        //******************************************
+        
+        try {
+            int idBuscar = Integer.parseInt(TxtInsertDNI.getText());
             Object[][] persona = c1.searchID(idBuscar);
         
             if(persona [0][0] == null){
@@ -439,36 +471,18 @@ public class CompanyGUI extends javax.swing.JFrame {
                 TxtDni.setText("");//Deja todo en vacio
                 TxtName.setText("");
                 TxtDependency.setText("");
-                //TxtDate.setText("");
+                TxtFileLoad.setText("");
             }
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Valor ingresador no es un ID");
+            JOptionPane.showMessageDialog(this, "Valor ingresador no es un DNI");
         }
         
-        //*************Borrar registro base*****************
-        DBConnection cn = new DBConnection();
-        Connection con = cn.getConnection();
-        java.util.Date date = new java.util.Date();
-        java.sql.Timestamp timestamp = new java.sql.Timestamp(date.getTime());
-        
-        String sql = "DELETE FROM Employee WHERE DNI = ?";
-        try {
-            PreparedStatement ps = con.prepareStatement(sql);
-            ps.setString(1, TxtDni.getText());
-            ps.executeQuery();
-            con.close();//Termina conexión
-            
-        } catch (SQLException ex) {
-            Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-        //******************************************
     }//GEN-LAST:event_BtnDeleteActionPerformed
 
     private void BtnUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnUpdateActionPerformed
         try {
-            long idBuscar = Long.parseLong(TxtInsertDNI.getText()); //obtner id en entero
+            long idBuscar = Long.parseLong(TxtInsertDNI.getText());
             Object[][] persona = c1.searchID(idBuscar);
         
             if(persona [0][0] == null){
@@ -489,7 +503,7 @@ public class CompanyGUI extends javax.swing.JFrame {
             }
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Valor ingresador no es un ID");
+            JOptionPane.showMessageDialog(this, "Valor ingresador no es un DNI");
         }
         
         //*************Actualizar base*****************
@@ -522,31 +536,55 @@ public class CompanyGUI extends javax.swing.JFrame {
         try {
             int idBuscar = Integer.parseInt(TxtInsertDNI.getText()); //obtner id en entero
             Object[][] persona = c1.searchID(idBuscar);//busca el ID en la memoria
-        
+            
+            DBConnection cn = new DBConnection();//Objeto de la clase de conexion a BD
+            Connection con = cn.getConnection();//Objeto Connection
+            byte[] blob =  null;
+            String encoded = null;
+            String sql = "SELECT RawFile, encodeFile FROM Employee WHERE DNI = ?"; //CommandSQL para consultar
+            try {
+                PreparedStatement ps = con.prepareStatement(sql); //declaro el CommandSQL en la clase connection
+                ps.setLong(1, Long.parseLong(TxtInsertDNI.getText()));
+                ResultSet employees = ps.executeQuery();
+                employees.next();
+                blob = employees.getBytes("RawFile");
+                encoded = employees.getString("encodeFile");
+                con.close();//Termina conexión con la base
+                JOptionPane.showMessageDialog(null, "Finaliza conexion con BD", "Conexion", JOptionPane.INFORMATION_MESSAGE);
+                this.actualizarModelo();//actualiza tabla en memoria
+            } catch (SQLException ex) {
+                Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
+            }
             if(persona [0][0] == null){
                 JOptionPane.showMessageDialog(this, "Empleado no existe");
             }
             else{
-                JSONObject json = new JSONObject(TxtFileLoad.getText()); //Crea un objeto JSON con la info de la ruta
-                String xml = XML.toString(json);//convierte json a xml
-                FileWriter myWriter = null;//iniciariza variable para escribir fichero
-                myWriter = new FileWriter("C:\\Users\\Cristian\\Desktop\\"+TxtDni.getText()+".xml");//crea un fichero en la ruta
-                myWriter.write(xml);//Escribe el fichero con la info convertida
-                myWriter.close();//cierra el fichero
+                byte[] decoded = Base64.getDecoder().decode(encoded);
+                String fileName = "C:\\Users\\Cristian\\Desktop\\"+TxtDni.getText()+".xml";
+                
+                String RawFile = new String(blob);
+                String RawFileDecode = new String(decoded);
+                
+                JSONObject RawFileDecodejson = new JSONObject(RawFileDecode); //Crea un objeto JSON con la info de la ruta
+                String xmlDecode = XML.toString(RawFileDecodejson);//convierte json a xml
+                
+//                JSONObject json = new JSONObject(RawFile); //Crea un objeto JSON con la info de la ruta
+//                String xml = XML.toString(json);//convierte json a xml
+                try {
+                    // Creates a FileWriter
+                    FileWriter outputDecode = new FileWriter(fileName);
+                    outputDecode.write(xmlDecode);
+                    outputDecode.close();
+                    
+                } catch (Exception e) {
+                    
+                }
+       
             }
             
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Valor ingresador no es un ID");
+        } catch (HeadlessException | NumberFormatException | JSONException e) {
+            JOptionPane.showMessageDialog(this, "Valor ingresador no es un DNI");
         }
-//        //******************************
-//        FileWriter myWriter = null;
-//        try {
-//            myWriter = new FileWriter("C:\\Users\\Cristian\\Desktop\\"+TxtDni.getText()+".xml");
-//            myWriter.write(xml);
-//            myWriter.close();
-//        } catch (IOException ex) {          
-//            Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
-//        }
     }//GEN-LAST:event_BtnDownloadActionPerformed
 
     public void actualizarModelo(){
@@ -554,7 +592,6 @@ public class CompanyGUI extends javax.swing.JFrame {
         modelo = new DefaultTableModel(data, columnas); //actualiza el modelo
         table.setModel(modelo);//actualiza la tabla
     }
-    
     
     /**
      * @param args the command line arguments

@@ -1,12 +1,9 @@
 
 package Config;
 
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.text.SimpleDateFormat;
-
-
 
 public class Company {
     
@@ -25,7 +22,7 @@ public class Company {
     //CREATE/Agregar
     public void Insert(long dni, String n, String d, Date date, String f){ // Agrega una persona a la tabla
         Employee m = new Employee(dni,n,d,date,f);
-        person.add(m);
+        person.add(m);//Adiciona los datos ingresados a base en memoria
     }
     
     //READ/Consultar
