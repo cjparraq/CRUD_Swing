@@ -9,9 +9,9 @@ import java.awt.HeadlessException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-//import java.io.File;
-//import java.io.FileNotFoundException;
-//import java.io.FileReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -351,7 +351,7 @@ public class CompanyGUI extends javax.swing.JFrame {
         String name = TxtName.getText(); //Obtener informacion ingresada de la interfaz
         String dependency = TxtDependency.getText();//Obtener informacion ingresada de la interfaz
         String filePath = TxtFileLoad.getText();//Obtener informacion ingresada de la interfaz
-        File rawFile = new File(filePath);
+        File rawFile = new File(filePath);//Leyendo el archivo 
         String contentFile = null;
         InputStream targetStream = null;
         try {
@@ -361,7 +361,7 @@ public class CompanyGUI extends javax.swing.JFrame {
             Logger.getLogger(CompanyGUI.class.getName()).log(Level.SEVERE, null, ex);
         }
         JSONObject file = null;
-        file = new JSONObject(contentFile);
+        file = new JSONObject(contentFile); //Leyendo el String y creandolo como objeto JSON
         
         //*************Enviar a base*****************
         DBConnection cn = new DBConnection();
@@ -547,8 +547,8 @@ public class CompanyGUI extends javax.swing.JFrame {
                 ps.setLong(1, Long.parseLong(TxtInsertDNI.getText()));
                 ResultSet employees = ps.executeQuery();
                 employees.next();
-                blob = employees.getBytes("RawFile");
-                encoded = employees.getString("encodeFile");
+                blob = employees.getBytes("RawFile");//Se asigna en byte
+                encoded = employees.getString("encodeFile");//Se asigna en String
                 con.close();//Termina conexión con la base
                 JOptionPane.showMessageDialog(null, "Finaliza conexion con BD", "Conexion", JOptionPane.INFORMATION_MESSAGE);
                 this.actualizarModelo();//actualiza tabla en memoria
@@ -559,22 +559,22 @@ public class CompanyGUI extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, "Empleado no existe");
             }
             else{
-                byte[] decoded = Base64.getDecoder().decode(encoded);
-                String fileName = "C:\\Users\\Cristian\\Desktop\\"+TxtDni.getText()+".xml";
+                byte[] decoded = Base64.getDecoder().decode(encoded);//Deodificando base64 a Byte
+                String fileName = "C:\\Users\\Cristian\\Desktop\\"+TxtDni.getText()+".xml"; //Ruta donde se va a descargar
                 
-                String RawFile = new String(blob);
+                //String RawFile = new String(blob);//Arreglo de byte a string
                 String RawFileDecode = new String(decoded);
                 
-                JSONObject RawFileDecodejson = new JSONObject(RawFileDecode); //Crea un objeto JSON con la info de la ruta
+                JSONObject RawFileDecodejson = new JSONObject(RawFileDecode); //Crea un objeto JSON con el archivo String
                 String xmlDecode = XML.toString(RawFileDecodejson);//convierte json a xml
                 
 //                JSONObject json = new JSONObject(RawFile); //Crea un objeto JSON con la info de la ruta
 //                String xml = XML.toString(json);//convierte json a xml
                 try {
                     // Creates a FileWriter
-                    FileWriter outputDecode = new FileWriter(fileName);
-                    outputDecode.write(xmlDecode);
-                    outputDecode.close();
+                    FileWriter outputDecode = new FileWriter(fileName);//crea un objeto de la libreria
+                    outputDecode.write(xmlDecode);//Escribe el xml
+                    outputDecode.close();//Termina de escribir
                     
                 } catch (Exception e) {
                     
